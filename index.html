@@ -202,6 +202,11 @@
             <span>Score</span>
             <span class="value" id="scoreValue">0</span>
           </div>
+
+          <div class="panel stat">
+            <span>Zone</span>
+            <span class="value" id="zoneValue">S-CENTER</span>
+          </div>
         </div>
 
         <div class="center-msg show" id="messageBox">
@@ -232,10 +237,19 @@
       const healthValue = document.getElementById('healthValue');
       const ammoValue = document.getElementById('ammoValue');
       const scoreValue = document.getElementById('scoreValue');
+      const zoneValue = document.getElementById('zoneValue');
       const messageBox = document.getElementById('messageBox');
 
       const keys = {};
       const touchState = { w: false, a: false, s: false, d: false };
+      const mapCenter = { x: canvas.width / 2, y: canvas.height / 2 };
+      const zoneScale = 22;
+      const zoneDefinitions = [
+        { name: 'S-CENTER', distMax: 9.5, tint: 'rgba(155, 45, 45, 0.38)', voice: 'Ring wall holding. Boss zone ahead.' },
+        { name: 'INDUSTRIAL', distMax: 17.5, tint: 'rgba(70, 110, 155, 0.34)', voice: 'Warehouses. Cold steel and dead silence.' },
+        { name: 'MARKET', distMax: 26.5, tint: 'rgba(168, 123, 52, 0.30)', voice: 'Stalls and wreckage. The market is full of noise.' },
+        { name: 'SLUMS', distMax: Infinity, tint: 'rgba(153, 118, 72, 0.28)', voice: 'The shacks are packed. Keep moving.' }
+      ];
 
       const player = {
         x: canvas.width / 2,
@@ -254,14 +268,57 @@
       let wave = 1;
       let gameOver = false;
       let started = false;
+      let currentZoneName = 'S-CENTER';
+      let zoneNoticeTimer = 0;
 
       function clamp(value, min, max) {
         return Math.min(max, Math.max(min, value));
       }
 
+      function getDistanceFromCenter() {
+        return Math.hypot(player.x - mapCenter.x, player.y - mapCenter.y) / zoneScale;
+      }
+
+      function getCurrentZone() {
+        const dist = getDistanceFromCenter();
+
+        for (let i = 0; i < zoneDefinitions.length; i++) {
+          const zone = zoneDefinitions[i];
+          if (dist < zone.distMax) {
+            return zone;
+          }
+        }
+
+        return zoneDefinitions[zoneDefinitions.length - 1];
+      }
+
+      function showZoneNotice(zoneName) {
+        const zone = zoneDefinitions.find((entry) => entry.name === zoneName) || zoneDefinitions[0];
+        messageBox.classList.add('show');
+        messageBox.innerHTML = '<h2>' + zone.name + '</h2><p>' + zone.voice + '</p>';
+        zoneNoticeTimer = 2.6;
+      }
+
+      function updateZoneState() {
+        const zone = getCurrentZone();
+
+        if (zone.name !== currentZoneName) {
+          currentZoneName = zone.name;
+          zoneValue.textContent = currentZoneName;
+          showZoneNotice(currentZoneName);
+        }
+
+        zoneValue.textContent = currentZoneName;
+      }
+
       function spawnEnemy() {
         const edge = Math.floor(Math.random() * 4);
-        let x = 0, y = 0;
+        const zone = getCurrentZone();
+        const hpBoost = 45 * zoneDefinitions.indexOf(zone);
+        const speedBoost = 0.09 * zoneDefinitions.indexOf(zone);
+
+        let x = 0;
+        let y = 0;
 
         if (edge === 0) {
           x = Math.random() * canvas.width;
@@ -281,8 +338,8 @@
           x,
           y,
           radius: 14 + Math.random() * 8,
-          speed: 0.7 + wave * 0.16 + Math.random() * 0.4,
-          health: 1 + wave * 0.3
+          speed: 0.7 + wave * 0.16 + Math.random() * 0.4 + speedBoost,
+          health: 1 + wave * 0.3 + (hpBoost / 45)
         });
       }
 
@@ -303,17 +360,28 @@
         enemies.length = 0;
         gameOver = false;
         started = true;
+        currentZoneName = 'S-CENTER';
+        zoneNoticeTimer = 0;
+        zoneValue.textContent = currentZoneName;
         messageBox.classList.remove('show');
-        for (let i = 0; i < 6; i++) spawnEnemy();
+
+        for (let i = 0; i < 6; i++) {
+          spawnEnemy();
+        }
+
         updateHud();
       }
 
       function fireBullet() {
         if (gameOver || player.ammo <= 0 || player.fireCooldown > 0) return;
+
         player.ammo -= 1;
         player.fireCooldown = 0.18;
 
-        const angle = Math.atan2((canvas.height / 2) - player.y, (canvas.width / 2) - player.x);
+        const targetX = player.x + (Math.random() - 0.5) * 24;
+        const targetY = player.y + (Math.random() - 0.5) * 24;
+        const angle = Math.atan2(targetY - player.y, targetX - player.x);
+
         bullets.push({
           x: player.x,
           y: player.y,
@@ -373,6 +441,7 @@
             player.health -= 0.8;
             if (player.health <= 0) {
               gameOver = true;
+              zoneNoticeTimer = 0;
               messageBox.classList.add('show');
               messageBox.innerHTML = '<h2>Game Over</h2><p>Tap shoot to restart survival.</p>';
             }
@@ -392,14 +461,20 @@
             if (dist < bullet.radius + enemy.radius) {
               bullets.splice(i, 1);
               enemy.health -= 1;
+
               if (enemy.health <= 0) {
                 enemies.splice(j, 1);
-                player.score += 10;
+                player.score += 10 + zoneDefinitions.indexOf(getCurrentZone()) * 2;
+                player.ammo = Math.min(99, player.ammo + 6 * zoneDefinitions.indexOf(getCurrentZone()));
+
                 if (player.score > 0 && player.score % 100 === 0) {
                   wave += 1;
-                  for (let k = 0; k < 3 + wave; k++) spawnEnemy();
+                  for (let k = 0; k < 3 + wave; k++) {
+                    spawnEnemy();
+                  }
                 }
               }
+
               break;
             }
           }
@@ -416,11 +491,20 @@
         if (!started) return;
 
         handleInput();
+        updateZoneState();
         updateHud();
+
+        if (zoneNoticeTimer > 0) {
+          zoneNoticeTimer = Math.max(0, zoneNoticeTimer - dt);
+          if (zoneNoticeTimer === 0 && !gameOver) {
+            messageBox.classList.remove('show');
+          }
+        }
 
         if (!gameOver) {
           player.fireCooldown = Math.max(0, player.fireCooldown - dt);
-          if (player.ammo < 12 && Math.random() < 0.004) {
+
+          if (player.ammo < 12 && Math.random() < 0.006) {
             player.ammo = Math.min(12, player.ammo + 1);
           }
 
@@ -431,12 +515,79 @@
         }
       }
 
+      function drawZoneOverlay() {
+        const zone = getCurrentZone();
+        ctx.fillStyle = zone.tint;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+        ctx.lineWidth = 1.25;
+
+        const ringDistances = [9.5, 17.5, 26.5].map((value) => value * zoneScale);
+        ringDistances.forEach((radius) => {
+          ctx.beginPath();
+          ctx.arc(mapCenter.x, mapCenter.y, radius, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.32)';
+        ctx.beginPath();
+        ctx.arc(mapCenter.x, mapCenter.y, 10.2 * zoneScale, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(mapCenter.x, mapCenter.y, 11.2 * zoneScale, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      function drawMinimap() {
+        const startX = canvas.width - 150;
+        const startY = 18;
+        const size = 96;
+
+        ctx.fillStyle = 'rgba(7, 11, 16, 0.72)';
+        ctx.fillRect(startX, startY, size, size);
+        ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+        ctx.strokeRect(startX, startY, size, size);
+
+        const rings = [0.9, 1.6, 2.4];
+        rings.forEach((scale) => {
+          ctx.beginPath();
+          ctx.arc(startX + size / 2, startY + size / 2, (size / 2) * scale, 0, Math.PI * 2);
+          ctx.stroke();
+        });
+
+        ctx.fillStyle = '#7dd3fc';
+        ctx.beginPath();
+        ctx.arc(startX + size / 2, startY + size / 2, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        const playerMapX = startX + size / 2 + ((player.x - mapCenter.x) / (canvas.width / 2)) * (size / 2);
+        const playerMapY = startY + size / 2 + ((player.y - mapCenter.y) / (canvas.height / 2)) * (size / 2);
+
+        ctx.fillStyle = '#fef3c7';
+        ctx.beginPath();
+        ctx.arc(playerMapX, playerMapY, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255, 120, 120, 0.7)';
+        for (const enemy of enemies) {
+          const ex = startX + size / 2 + ((enemy.x - mapCenter.x) / (canvas.width / 2)) * (size / 2);
+          const ey = startY + size / 2 + ((enemy.y - mapCenter.y) / (canvas.height / 2)) * (size / 2);
+          ctx.beginPath();
+          ctx.arc(ex, ey, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
       function drawBackground() {
         const grd = ctx.createLinearGradient(0, 0, 0, canvas.height);
         grd.addColorStop(0, '#0a1015');
         grd.addColorStop(1, '#05090c');
         ctx.fillStyle = grd;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        drawZoneOverlay();
 
         for (let i = 0; i < 40; i++) {
           const x = (i * 71 + (Date.now() * 0.02) % 100) % canvas.width;
@@ -484,6 +635,7 @@
         drawBullets();
         drawEnemies();
         drawPlayer();
+        drawMinimap();
       }
 
       function tick(timestamp) {
@@ -496,18 +648,22 @@
       }
 
       window.addEventListener('keydown', (event) => {
-        keys[event.key.toLowerCase()] = true;
+        const key = event.key.toLowerCase();
+        keys[key] = true;
+
         if (event.key === ' ') {
           event.preventDefault();
           fireBullet();
         }
-        if (event.key === 'r') {
+
+        if (key === 'r') {
           player.ammo = 12;
         }
       });
 
       window.addEventListener('keyup', (event) => {
-        keys[event.key.toLowerCase()] = false;
+        const key = event.key.toLowerCase();
+        keys[key] = false;
       });
 
       document.getElementById('shootBtn').addEventListener('click', () => {
@@ -533,6 +689,9 @@
         if (!started) resetGame();
       });
 
+      // Zone deploy: map tiers are now active and tracked by radial distance from the center.
+      currentZoneName = 'S-CENTER';
+      zoneValue.textContent = currentZoneName;
       resetGame();
       requestAnimationFrame(tick);
     </script>
