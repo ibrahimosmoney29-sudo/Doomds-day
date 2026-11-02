@@ -386,7 +386,7 @@
         }
         zoneValue.textContent = currentZoneName;
 
-        if (currentZoneName === 'S-CENTER' && !boss.active && !boss.defeated) {
+        if (currentZoneName === 'S-CENTER' && !boss.active && !boss.defeated && !gameOver) {
           startBoss();
         }
       }
@@ -530,18 +530,19 @@
       }
 
       function applyBossSeals() {
-        if (!boss.active || !boss.gateClosed) return;
-        const dist = getDistanceFromCenter();
-        const sealRadius = 9.5;
-        if (dist > sealRadius) {
-          const dx = player.x - mapCenter.x;
-          const dy = player.y - mapCenter.y;
-          const distance = Math.hypot(dx, dy) || 1;
-          const nx = dx / distance;
-          const ny = dy / distance;
-          const maxDistance = sealRadius * zoneScale;
-          player.x = mapCenter.x + nx * (maxDistance - 4);
-          player.y = mapCenter.y + ny * (maxDistance - 4);
+        if (!boss.active || !boss.gateClosed || gameOver) return;
+
+        const sealRadius = 9.5 * zoneScale;
+        const dx = player.x - mapCenter.x;
+        const dy = player.y - mapCenter.y;
+        const distance = Math.hypot(dx, dy);
+
+        if (distance > sealRadius - 10) {
+          const currentDistance = Math.max(distance, 1);
+          const nx = dx / currentDistance;
+          const ny = dy / currentDistance;
+          player.x = mapCenter.x + nx * (sealRadius - 12);
+          player.y = mapCenter.y + ny * (sealRadius - 12);
         }
       }
 
