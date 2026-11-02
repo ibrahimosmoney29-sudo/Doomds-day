@@ -15,7 +15,9 @@
         --accent: #7dd3fc;
         --accent-2: #a7f3d0;
       }
+
       * { box-sizing: border-box; }
+
       html, body {
         margin: 0;
         height: 100%;
@@ -24,11 +26,13 @@
         font-family: Arial, Helvetica, sans-serif;
         overflow: hidden;
       }
+
       body {
         display: flex;
         align-items: center;
         justify-content: center;
       }
+
       .game-wrap {
         position: relative;
         width: min(92vw, 920px);
@@ -39,6 +43,7 @@
         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
         overflow: hidden;
       }
+
       canvas {
         display: block;
         width: 100%;
@@ -46,11 +51,13 @@
         background: #0d1115;
         image-rendering: pixelated;
       }
+
       .hud {
         position: absolute;
         inset: 0;
         pointer-events: none;
       }
+
       .topbar {
         position: absolute;
         top: 16px;
@@ -61,6 +68,7 @@
         gap: 12px;
         align-items: flex-start;
       }
+
       .panel {
         background: var(--panel);
         border: 1px solid var(--panel-border);
@@ -69,6 +77,7 @@
         backdrop-filter: blur(6px);
         box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
       }
+
       .stat {
         display: flex;
         align-items: center;
@@ -78,11 +87,13 @@
         text-transform: uppercase;
         color: var(--muted);
       }
+
       .value {
         color: var(--text);
         font-weight: 700;
         letter-spacing: 0.08em;
       }
+
       .boss-hud {
         position: absolute;
         top: 72px;
@@ -92,6 +103,7 @@
         padding: 8px 10px 10px;
         display: none;
       }
+
       .boss-label {
         font-size: 10px;
         letter-spacing: 0.18em;
@@ -99,6 +111,7 @@
         color: #ffc7c7;
         margin-bottom: 6px;
       }
+
       .boss-bar {
         width: 100%;
         height: 10px;
@@ -107,12 +120,14 @@
         border-radius: 999px;
         overflow: hidden;
       }
+
       .boss-fill {
         width: 100%;
         height: 100%;
         background: linear-gradient(90deg, #ff5d5d, #ff8a8a);
         border-radius: 999px;
       }
+
       .controls {
         position: absolute;
         left: 16px;
@@ -123,6 +138,7 @@
         justify-content: space-between;
         gap: 12px;
       }
+
       .move-pad {
         display: flex;
         flex-wrap: wrap;
@@ -130,6 +146,7 @@
         gap: 8px;
         pointer-events: auto;
       }
+
       .move-btn, .action-btn {
         border: 1px solid var(--panel-border);
         background: rgba(255,255,255,0.04);
@@ -140,18 +157,22 @@
         min-height: 48px;
         touch-action: manipulation;
       }
+
       .move-btn {
         flex: 1 0 28%;
       }
+
       .action-btn {
         min-width: 92px;
         min-height: 52px;
       }
+
       .right-actions {
         display: flex;
         gap: 10px;
         pointer-events: auto;
       }
+
       .center-msg {
         position: absolute;
         inset: 50% auto auto 50%;
@@ -164,13 +185,16 @@
         min-width: min(80vw, 340px);
         text-align: center;
       }
+
       .center-msg.show { display: block; }
+
       .center-msg h2 {
         margin: 0 0 8px;
         letter-spacing: 0.18em;
         text-transform: uppercase;
         font-size: 18px;
       }
+
       .center-msg p {
         margin: 0;
         color: var(--muted);
@@ -179,11 +203,13 @@
         letter-spacing: 0.12em;
         text-transform: uppercase;
       }
+
       @media (max-width: 620px) {
         .topbar {
           gap: 8px;
           flex-direction: column;
         }
+
         .controls {
           align-items: flex-end;
         }
@@ -204,11 +230,6 @@
           <div class="panel stat">
             <span>Ammo</span>
             <span class="value" id="ammoValue">12</span>
-          </div>
-
-          <div class="panel stat">
-            <span>Fuel</span>
-            <span class="value" id="fuelValue">0</span>
           </div>
 
           <div class="panel stat">
@@ -256,7 +277,6 @@
       const ctx = canvas.getContext('2d');
       const healthValue = document.getElementById('healthValue');
       const ammoValue = document.getElementById('ammoValue');
-      const fuelValue = document.getElementById('fuelValue');
       const scoreValue = document.getElementById('scoreValue');
       const zoneValue = document.getElementById('zoneValue');
       const messageBox = document.getElementById('messageBox');
@@ -287,22 +307,6 @@
         score: 0
       };
 
-      const vehicle = {
-        active: false,
-        x: 0,
-        y: 0,
-        angle: 0,
-        radius: 22,
-        speed: 0,
-        fuel: 100,
-        maxFuel: 100,
-        near: false,
-        parked: false
-      };
-
-      const vehicles = [];
-      const fuelDrops = [];
-
       const boss = {
         active: false,
         defeated: false,
@@ -329,7 +333,6 @@
         fuel: 3
       };
 
-      const buildings = [];
       const bullets = [];
       const enemies = [];
       let lastTime = 0;
@@ -341,157 +344,6 @@
 
       function clamp(value, min, max) {
         return Math.min(max, Math.max(min, value));
-      }
-
-      function createVehicle(x, y) {
-        return {
-          x,
-          y,
-          angle: 0,
-          w: 28,
-          h: 16,
-          color: 'rgba(80, 120, 150, 0.92)',
-          fuel: 100,
-          active: true,
-          id: Math.random()
-        };
-      }
-
-      function addVehiclePositions() {
-        vehicles.length = 0;
-        const list = [
-          { x: 200, y: 170 },
-          { x: 520, y: 160 },
-          { x: 640, y: 420 },
-          { x: 260, y: 430 },
-          { x: 360, y: 300 }
-        ];
-        list.forEach((spot) => {
-          vehicles.push(createVehicle(spot.x, spot.y));
-        });
-      }
-
-      function seedFuelDrops() {
-        fuelDrops.length = 0;
-        const drops = [
-          { x: 140, y: 210 },
-          { x: 730, y: 170 },
-          { x: 280, y: 500 },
-          { x: 620, y: 500 },
-          { x: 470, y: 330 }
-        ];
-        drops.forEach((drop) => {
-          fuelDrops.push({ x: drop.x, y: drop.y, radius: 8, value: 25 });
-        });
-      }
-
-      function generateCityBuildings() {
-        buildings.length = 0;
-        const zone = getCurrentZone();
-        const zoneIndex = zoneDefinitions.indexOf(zone);
-        const rows = 8;
-        const cols = 10;
-
-        for (let row = 0; row < rows; row++) {
-          for (let col = 0; col < cols; col++) {
-            const x = 40 + col * 78 + ((row % 2) * 18);
-            const y = 32 + row * 58 + ((col % 2) * 12);
-            const width = 50 + (Math.random() * 18);
-            const height = 24 + Math.random() * 38 + zoneIndex * 10;
-            const floors = 1 + (Math.random() > 0.5 ? 1 : 0) + (zoneIndex > 1 ? 1 : 0);
-            const roofHeight = 9 + Math.random() * 10;
-            const buildingColor = zone.name === 'INDUSTRIAL'
-              ? 'rgba(100, 112, 119, 0.34)'
-              : zone.name === 'MARKET'
-              ? 'rgba(153, 118, 66, 0.33)'
-              : zone.name === 'SLUMS'
-              ? 'rgba(120, 85, 60, 0.28)'
-              : 'rgba(135, 60, 60, 0.24)';
-
-            buildings.push({
-              x,
-              y,
-              w: width,
-              h: height,
-              floors,
-              roofHeight,
-              color: buildingColor,
-              roofColor: zone.name === 'INDUSTRIAL' ? 'rgba(169, 179, 188, 0.28)' : 'rgba(255,255,255,0.08)'
-            });
-          }
-        }
-      }
-
-      function drawGlassCeiling(building) {
-        const x = building.x + 6;
-        const y = building.y + 8;
-        const w = building.w - 12;
-        const h = Math.min(15, building.h * 0.18);
-
-        ctx.fillStyle = 'rgba(115, 155, 190, 0.16)';
-        ctx.fillRect(x, y, w, h);
-
-        ctx.strokeStyle = 'rgba(210, 228, 255, 0.18)';
-        ctx.lineWidth = 1;
-        for (let i = 0; i < 8; i++) {
-          const shardX = x + 6 + i * ((w - 12) / 7);
-          const shardY = y + 2 + (i % 2) * 3;
-          ctx.beginPath();
-          ctx.moveTo(shardX, shardY);
-          ctx.lineTo(shardX + 5, shardY + 3);
-          ctx.lineTo(shardX + 2, shardY + h - 2);
-          ctx.closePath();
-          ctx.fillStyle = 'rgba(170, 214, 255, 0.18)';
-          ctx.fill();
-          ctx.stroke();
-        }
-
-        ctx.beginPath();
-        ctx.moveTo(x, y + h * 0.35);
-        ctx.lineTo(x + w, y + h * 0.35);
-        ctx.moveTo(x + 10, y);
-        ctx.lineTo(x + 10, y + h);
-        ctx.moveTo(x + w - 10, y);
-        ctx.lineTo(x + w - 10, y + h);
-        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-        ctx.stroke();
-      }
-
-      function drawBuilding(building) {
-        const baseX = building.x;
-        const baseY = building.y;
-        const floorHeight = building.h / Math.max(1, building.floors);
-
-        ctx.fillStyle = building.color;
-        ctx.fillRect(baseX, baseY, building.w, building.h);
-        drawGlassCeiling(building);
-
-        for (let floor = 0; floor < building.floors; floor++) {
-          const fy = baseY + floor * floorHeight;
-          ctx.fillStyle = 'rgba(255,255,255,0.07)';
-          ctx.fillRect(baseX + 5, fy + 6, building.w - 10, 2);
-          ctx.fillRect(baseX + 5, fy + floorHeight - 6, building.w - 10, 2);
-
-          const windowCount = 3 + Math.round((building.w / 18));
-          for (let i = 0; i < windowCount; i++) {
-            const wx = baseX + 8 + i * ((building.w - 16) / Math.max(1, windowCount - 1));
-            const wy = fy + 10 + ((floor % 2) * 3);
-            ctx.fillStyle = 'rgba(255, 240, 184, 0.18)';
-            ctx.fillRect(wx, wy, 5, 8);
-          }
-        }
-
-        const roofY = baseY - building.roofHeight;
-        ctx.fillStyle = building.roofColor;
-        ctx.fillRect(baseX - 2, roofY, building.w + 4, building.roofHeight);
-        ctx.fillStyle = 'rgba(255,255,255,0.14)';
-        ctx.fillRect(baseX + 3, roofY + 2, building.w - 6, 2);
-
-        const roofGlassY = roofY - 6;
-        ctx.fillStyle = 'rgba(145, 180, 220, 0.12)';
-        ctx.fillRect(baseX + 4, roofGlassY, building.w - 8, 4);
-        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-        ctx.strokeRect(baseX + 4, roofGlassY, building.w - 8, 4);
       }
 
       function getDistanceFromCenter() {
@@ -531,7 +383,6 @@
           currentZoneName = zone.name;
           zoneValue.textContent = currentZoneName;
           showZoneNotice(currentZoneName);
-          generateCityBuildings();
         }
         zoneValue.textContent = currentZoneName;
 
@@ -590,7 +441,6 @@
       function updateHud() {
         healthValue.textContent = Math.max(0, Math.ceil(player.health));
         ammoValue.textContent = player.ammo;
-        fuelValue.textContent = Math.max(0, Math.ceil(vehicle.fuel));
         scoreValue.textContent = player.score;
       }
 
@@ -602,9 +452,11 @@
         player.medkits = 0;
         player.fuel = 0;
         player.score = 0;
+
         wave = 1;
         bullets.length = 0;
         enemies.length = 0;
+
         boss.active = false;
         boss.defeated = false;
         boss.gateClosed = false;
@@ -614,22 +466,18 @@
         boss.rise = 0;
         boss.attackCooldown = 0;
         boss.spawnCooldown = 9;
+
         goldCache.active = false;
-        vehicle.active = false;
-        vehicle.x = 0;
-        vehicle.y = 0;
-        vehicle.angle = 0;
-        vehicle.speed = 0;
-        vehicle.fuel = 100;
+        goldCache.x = 0;
+        goldCache.y = 0;
+
         gameOver = false;
         started = true;
         currentZoneName = 'S-CENTER';
         zoneNoticeTimer = 0;
         zoneValue.textContent = currentZoneName;
         messageBox.classList.remove('show');
-        generateCityBuildings();
-        addVehiclePositions();
-        seedFuelDrops();
+        messageBox.innerHTML = '<h2>Doomsday</h2><p>Move with WASD or the touch pad. Tap shoot to survive the night.</p>';
         updateBossHud();
 
         for (let i = 0; i < 6; i++) {
@@ -639,68 +487,8 @@
         updateHud();
       }
 
-      function getNearestVehicle() {
-        let nearest = null;
-        let nearestDist = Infinity;
-        for (const v of vehicles) {
-          const d = Math.hypot(player.x - v.x, player.y - v.y);
-          if (d < nearestDist) {
-            nearest = v;
-            nearestDist = d;
-          }
-        }
-        return nearestDist < 40 ? nearest : null;
-      }
-
-      function toggleVehicle() {
-        if (gameOver) return;
-        const target = getNearestVehicle();
-        if (!target) {
-          if (vehicle.active) {
-            vehicle.active = false;
-          }
-          return;
-        }
-
-        if (!vehicle.active) {
-          vehicle.active = true;
-          vehicle.x = target.x;
-          vehicle.y = target.y;
-          vehicle.angle = 0;
-          vehicle.speed = 0;
-          vehicle.fuel = Math.max(15, vehicle.fuel);
-          player.x = target.x;
-          player.y = target.y;
-          messageBox.classList.add('show');
-          messageBox.innerHTML = '<h2>Vehicle</h2><p>Drive. Fuel is limited.</p>';
-          zoneNoticeTimer = 1.8;
-        } else {
-          vehicle.active = false;
-          player.x = vehicle.x + 30;
-          player.y = vehicle.y + 18;
-          messageBox.classList.add('show');
-          messageBox.innerHTML = '<h2>On Foot</h2><p>Vehicle abandoned.</p>';
-          zoneNoticeTimer = 1.5;
-        }
-      }
-
-      function collectFuelDrop() {
-        for (let i = fuelDrops.length - 1; i >= 0; i--) {
-          const drop = fuelDrops[i];
-          if (Math.hypot(player.x - drop.x, player.y - drop.y) < 22) {
-            const gain = 25;
-            vehicle.fuel = Math.min(vehicle.maxFuel, vehicle.fuel + gain);
-            player.fuel += gain;
-            fuelDrops.splice(i, 1);
-            messageBox.classList.add('show');
-            messageBox.innerHTML = '<h2>Fuel</h2><p>Canister taken. +25 fuel.</p>';
-            zoneNoticeTimer = 1.8;
-          }
-        }
-      }
-
       function fireBullet() {
-        if (gameOver || player.ammo <= 0 || player.fireCooldown > 0) return;
+        if (!started || gameOver || player.ammo <= 0 || player.fireCooldown > 0) return;
 
         player.ammo -= 1;
         player.fireCooldown = 0.18;
@@ -723,38 +511,9 @@
       function handleInput() {
         if (!started) return;
 
-        if (vehicle.active) {
-          let dx = 0;
-          let dy = 0;
-          if (keys.w || touchState.w) dy -= 1;
-          if (keys.s || touchState.s) dy += 1;
-          if (keys.a || touchState.a) dx -= 1;
-          if (keys.d || touchState.d) dx += 1;
-
-          if (dx !== 0 || dy !== 0) {
-            vehicle.angle = Math.atan2(dy, dx);
-            const speed = 4.6;
-            vehicle.x += Math.cos(vehicle.angle) * speed;
-            vehicle.y += Math.sin(vehicle.angle) * speed;
-            vehicle.x = clamp(vehicle.x, 20, canvas.width - 20);
-            vehicle.y = clamp(vehicle.y, 20, canvas.height - 20);
-            vehicle.fuel = Math.max(0, vehicle.fuel - 0.12);
-            if (vehicle.fuel <= 0) {
-              vehicle.active = false;
-              player.x = vehicle.x + 22;
-              player.y = vehicle.y + 22;
-              messageBox.classList.add('show');
-              messageBox.innerHTML = '<h2>Out of Fuel</h2><p>The vehicle dies. You’re on foot.</p>';
-              zoneNoticeTimer = 2.0;
-            }
-          }
-          player.x = vehicle.x;
-          player.y = vehicle.y;
-          return;
-        }
-
         let dx = 0;
         let dy = 0;
+
         if (keys.w || touchState.w) dy -= 1;
         if (keys.s || touchState.s) dy += 1;
         if (keys.a || touchState.a) dx -= 1;
@@ -986,34 +745,7 @@
           checkCollisions();
           handleSpawning();
           pickupGoldCache();
-          collectFuelDrop();
         }
-      }
-
-      function drawVehicle(v) {
-        ctx.save();
-        ctx.translate(v.x, v.y);
-        ctx.rotate(v.angle || 0);
-        ctx.fillStyle = 'rgba(70, 100, 130, 0.96)';
-        ctx.fillRect(-16, -10, 32, 20);
-        ctx.fillStyle = 'rgba(200, 220, 255, 0.35)';
-        ctx.fillRect(-8, -6, 16, 12);
-        ctx.fillStyle = 'rgba(28, 32, 44, 0.85)';
-        ctx.fillRect(-18, -12, 5, 5);
-        ctx.fillRect(13, -12, 5, 5);
-        ctx.fillRect(-18, 7, 5, 5);
-        ctx.fillRect(13, 7, 5, 5);
-        ctx.restore();
-      }
-
-      function drawFuelDrop(drop) {
-        ctx.fillStyle = '#fbbf24';
-        ctx.beginPath();
-        ctx.arc(drop.x, drop.y, drop.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#111827';
-        ctx.fillRect(drop.x - 4, drop.y - 1, 8, 2);
-        ctx.fillRect(drop.x - 1, drop.y - 4, 2, 8);
       }
 
       function drawZoneOverlay() {
@@ -1040,8 +772,26 @@
         ctx.arc(mapCenter.x, mapCenter.y, 11.2 * zoneScale, 0, Math.PI * 2);
         ctx.stroke();
 
-        for (const building of buildings) {
-          drawBuilding(building);
+        for (let i = 0; i < 16; i++) {
+          const rx = (i * 80 + 40) % canvas.width;
+          const ry = (i * 40 + 60) % canvas.height;
+          if (zone.name === 'INDUSTRIAL') {
+            ctx.fillStyle = 'rgba(120, 138, 160, 0.22)';
+            ctx.fillRect(rx, ry, 60, 34);
+          } else if (zone.name === 'MARKET') {
+            ctx.fillStyle = 'rgba(180, 140, 80, 0.18)';
+            ctx.fillRect(rx, ry, 46, 28);
+            ctx.fillStyle = 'rgba(255, 228, 160, 0.08)';
+            ctx.fillRect(rx + 6, ry + 6, 14, 12);
+          } else if (zone.name === 'SLUMS') {
+            ctx.fillStyle = 'rgba(120, 75, 40, 0.16)';
+            ctx.fillRect(rx, ry, 38, 24);
+            ctx.fillStyle = 'rgba(255, 180, 90, 0.08)';
+            ctx.fillRect(rx + 7, ry + 5, 10, 8);
+          } else {
+            ctx.fillStyle = 'rgba(180, 50, 50, 0.10)';
+            ctx.fillRect(rx, ry, 58, 22);
+          }
         }
       }
 
@@ -1121,22 +871,6 @@
           ctx.fill();
         }
 
-        for (const vehicleItem of vehicles) {
-          const vX = startX + size / 2 + ((vehicleItem.x - mapCenter.x) / (canvas.width / 2)) * (size / 2);
-          const vY = startY + size / 2 + ((vehicleItem.y - mapCenter.y) / (canvas.height / 2)) * (size / 2);
-          ctx.fillStyle = 'rgba(125, 211, 252, 0.85)';
-          ctx.fillRect(vX - 2, vY - 2, 4, 4);
-        }
-
-        for (const drop of fuelDrops) {
-          const fx = startX + size / 2 + ((drop.x - mapCenter.x) / (canvas.width / 2)) * (size / 2);
-          const fy = startY + size / 2 + ((drop.y - mapCenter.y) / (canvas.height / 2)) * (size / 2);
-          ctx.fillStyle = '#fbbf24';
-          ctx.beginPath();
-          ctx.arc(fx, fy, 2, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
         ctx.fillStyle = 'rgba(255, 120, 120, 0.7)';
         for (const enemy of enemies) {
           const ex = startX + size / 2 + ((enemy.x - mapCenter.x) / (canvas.width / 2)) * (size / 2);
@@ -1165,11 +899,6 @@
       }
 
       function drawPlayer() {
-        if (vehicle.active) {
-          drawVehicle(vehicle);
-          return;
-        }
-
         ctx.fillStyle = '#7dd3fc';
         ctx.beginPath();
         ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
@@ -1202,14 +931,14 @@
         }
       }
 
+      function attemptRestart() {
+        if (!started || gameOver) {
+          resetGame();
+        }
+      }
+
       function render() {
         drawBackground();
-        for (const v of vehicles) {
-          drawVehicle(v);
-        }
-        for (const drop of fuelDrops) {
-          drawFuelDrop(drop);
-        }
         drawBullets();
         drawEnemies();
         drawBoss();
@@ -1233,15 +962,15 @@
 
         if (event.key === ' ') {
           event.preventDefault();
+          attemptRestart();
           fireBullet();
         }
 
         if (key === 'r') {
+          if (!started || gameOver) {
+            resetGame();
+          }
           player.ammo = 12;
-        }
-
-        if (key === 'f') {
-          toggleVehicle();
         }
       });
 
@@ -1251,7 +980,7 @@
       });
 
       document.getElementById('shootBtn').addEventListener('click', () => {
-        if (!started) resetGame();
+        attemptRestart();
         fireBullet();
       });
 
@@ -1260,7 +989,9 @@
 
         const press = (value) => {
           touchState[key] = value;
-          if (!started && value) resetGame();
+          if ((!started || gameOver) && value) {
+            resetGame();
+          }
         };
 
         btn.addEventListener('pointerdown', () => press(true));
@@ -1270,14 +1001,13 @@
       });
 
       window.addEventListener('pointerdown', () => {
-        if (!started) resetGame();
+        if (!started || gameOver) {
+          resetGame();
+        }
       });
 
       currentZoneName = 'S-CENTER';
       zoneValue.textContent = currentZoneName;
-      generateCityBuildings();
-      addVehiclePositions();
-      seedFuelDrops();
       resetGame();
       requestAnimationFrame(tick);
     </script>
