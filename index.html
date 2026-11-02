@@ -333,6 +333,7 @@
         fuel: 3
       };
 
+      const buildings = [];
       const bullets = [];
       const enemies = [];
       let lastTime = 0;
@@ -344,6 +345,116 @@
 
       function clamp(value, min, max) {
         return Math.min(max, Math.max(min, value));
+      }
+
+      function generateCityBuildings() {
+        buildings.length = 0;
+        const zone = getCurrentZone();
+        const zoneIndex = zoneDefinitions.indexOf(zone);
+        const rows = 8;
+        const cols = 10;
+
+        for (let row = 0; row < rows; row++) {
+          for (let col = 0; col < cols; col++) {
+            const x = 40 + col * 78 + ((row % 2) * 18);
+            const y = 32 + row * 58 + ((col % 2) * 12);
+            const width = 50 + (Math.random() * 18);
+            const height = 24 + Math.random() * 38 + zoneIndex * 10;
+            const floors = 1 + (Math.random() > 0.5 ? 1 : 0) + (zoneIndex > 1 ? 1 : 0);
+            const roofHeight = 9 + Math.random() * 10;
+            const buildingColor = zone.name === 'INDUSTRIAL'
+              ? 'rgba(100, 112, 119, 0.34)'
+              : zone.name === 'MARKET'
+              ? 'rgba(153, 118, 66, 0.33)'
+              : zone.name === 'SLUMS'
+              ? 'rgba(120, 85, 60, 0.28)'
+              : 'rgba(135, 60, 60, 0.24)';
+
+            buildings.push({
+              x,
+              y,
+              w: width,
+              h: height,
+              floors,
+              roofHeight,
+              color: buildingColor,
+              roofColor: zone.name === 'INDUSTRIAL' ? 'rgba(169, 179, 188, 0.28)' : 'rgba(255,255,255,0.08)'
+            });
+          }
+        }
+      }
+
+      function drawGlassCeiling(building) {
+        const x = building.x + 6;
+        const y = building.y + 8;
+        const w = building.w - 12;
+        const h = Math.min(15, building.h * 0.18);
+
+        ctx.fillStyle = 'rgba(115, 155, 190, 0.16)';
+        ctx.fillRect(x, y, w, h);
+
+        ctx.strokeStyle = 'rgba(210, 228, 255, 0.18)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 8; i++) {
+          const shardX = x + 6 + i * ((w - 12) / 7);
+          const shardY = y + 2 + (i % 2) * 3;
+          ctx.beginPath();
+          ctx.moveTo(shardX, shardY);
+          ctx.lineTo(shardX + 5, shardY + 3);
+          ctx.lineTo(shardX + 2, shardY + h - 2);
+          ctx.closePath();
+          ctx.fillStyle = 'rgba(170, 214, 255, 0.18)';
+          ctx.fill();
+          ctx.stroke();
+        }
+
+        ctx.beginPath();
+        ctx.moveTo(x, y + h * 0.35);
+        ctx.lineTo(x + w, y + h * 0.35);
+        ctx.moveTo(x + 10, y);
+        ctx.lineTo(x + 10, y + h);
+        ctx.moveTo(x + w - 10, y);
+        ctx.lineTo(x + w - 10, y + h);
+        ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+        ctx.stroke();
+      }
+
+      function drawBuilding(building) {
+        const baseX = building.x;
+        const baseY = building.y;
+        const floorHeight = building.h / Math.max(1, building.floors);
+
+        ctx.fillStyle = building.color;
+        ctx.fillRect(baseX, baseY, building.w, building.h);
+
+        drawGlassCeiling(building);
+
+        for (let floor = 0; floor < building.floors; floor++) {
+          const fy = baseY + floor * floorHeight;
+          ctx.fillStyle = 'rgba(255,255,255,0.07)';
+          ctx.fillRect(baseX + 5, fy + 6, building.w - 10, 2);
+          ctx.fillRect(baseX + 5, fy + floorHeight - 6, building.w - 10, 2);
+
+          const windowCount = 3 + Math.round((building.w / 18));
+          for (let i = 0; i < windowCount; i++) {
+            const wx = baseX + 8 + i * ((building.w - 16) / Math.max(1, windowCount - 1));
+            const wy = fy + 10 + ((floor % 2) * 3);
+            ctx.fillStyle = 'rgba(255, 240, 184, 0.18)';
+            ctx.fillRect(wx, wy, 5, 8);
+          }
+        }
+
+        const roofY = baseY - building.roofHeight;
+        ctx.fillStyle = building.roofColor;
+        ctx.fillRect(baseX - 2, roofY, building.w + 4, building.roofHeight);
+        ctx.fillStyle = 'rgba(255,255,255,0.14)';
+        ctx.fillRect(baseX + 3, roofY + 2, building.w - 6, 2);
+
+        const roofGlassY = roofY - 6;
+        ctx.fillStyle = 'rgba(145, 180, 220, 0.12)';
+        ctx.fillRect(baseX + 4, roofGlassY, building.w - 8, 4);
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.strokeRect(baseX + 4, roofGlassY, building.w - 8, 4);
       }
 
       function getDistanceFromCenter() {
@@ -383,6 +494,7 @@
           currentZoneName = zone.name;
           zoneValue.textContent = currentZoneName;
           showZoneNotice(currentZoneName);
+          generateCityBuildings();
         }
         zoneValue.textContent = currentZoneName;
 
@@ -471,6 +583,7 @@
         zoneNoticeTimer = 0;
         zoneValue.textContent = currentZoneName;
         messageBox.classList.remove('show');
+        generateCityBuildings();
         updateBossHud();
 
         for (let i = 0; i < 6; i++) {
@@ -765,26 +878,8 @@
         ctx.arc(mapCenter.x, mapCenter.y, 11.2 * zoneScale, 0, Math.PI * 2);
         ctx.stroke();
 
-        for (let i = 0; i < 16; i++) {
-          const rx = (i * 80 + 40) % canvas.width;
-          const ry = (i * 40 + 60) % canvas.height;
-          if (zone.name === 'INDUSTRIAL') {
-            ctx.fillStyle = 'rgba(120, 138, 160, 0.22)';
-            ctx.fillRect(rx, ry, 60, 34);
-          } else if (zone.name === 'MARKET') {
-            ctx.fillStyle = 'rgba(180, 140, 80, 0.18)';
-            ctx.fillRect(rx, ry, 46, 28);
-            ctx.fillStyle = 'rgba(255, 228, 160, 0.08)';
-            ctx.fillRect(rx + 6, ry + 6, 14, 12);
-          } else if (zone.name === 'SLUMS') {
-            ctx.fillStyle = 'rgba(120, 75, 40, 0.16)';
-            ctx.fillRect(rx, ry, 38, 24);
-            ctx.fillStyle = 'rgba(255, 180, 90, 0.08)';
-            ctx.fillRect(rx + 7, ry + 5, 10, 8);
-          } else {
-            ctx.fillStyle = 'rgba(180, 50, 50, 0.10)';
-            ctx.fillRect(rx, ry, 58, 22);
-          }
+        for (const building of buildings) {
+          drawBuilding(building);
         }
       }
 
@@ -985,9 +1080,9 @@
         if (!started) resetGame();
       });
 
-      // S-CENTER boss: arena seal, boss waves, and gold cache reward.
       currentZoneName = 'S-CENTER';
       zoneValue.textContent = currentZoneName;
+      generateCityBuildings();
       resetGame();
       requestAnimationFrame(tick);
     </script>
