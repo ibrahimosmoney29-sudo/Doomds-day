@@ -281,14 +281,12 @@
 
       function getCurrentZone() {
         const dist = getDistanceFromCenter();
-
         for (let i = 0; i < zoneDefinitions.length; i++) {
           const zone = zoneDefinitions[i];
           if (dist < zone.distMax) {
             return zone;
           }
         }
-
         return zoneDefinitions[zoneDefinitions.length - 1];
       }
 
@@ -301,22 +299,20 @@
 
       function updateZoneState() {
         const zone = getCurrentZone();
-
         if (zone.name !== currentZoneName) {
           currentZoneName = zone.name;
           zoneValue.textContent = currentZoneName;
           showZoneNotice(currentZoneName);
         }
-
         zoneValue.textContent = currentZoneName;
       }
 
       function spawnEnemy() {
         const edge = Math.floor(Math.random() * 4);
         const zone = getCurrentZone();
-        const hpBoost = 45 * zoneDefinitions.indexOf(zone);
-        const speedBoost = 0.09 * zoneDefinitions.indexOf(zone);
-
+        const tier = zoneDefinitions.indexOf(zone);
+        const hpBoost = 45 * tier;
+        const speedBoost = 0.09 * tier;
         let x = 0;
         let y = 0;
 
@@ -464,8 +460,9 @@
 
               if (enemy.health <= 0) {
                 enemies.splice(j, 1);
-                player.score += 10 + zoneDefinitions.indexOf(getCurrentZone()) * 2;
-                player.ammo = Math.min(99, player.ammo + 6 * zoneDefinitions.indexOf(getCurrentZone()));
+                const currentZoneTier = zoneDefinitions.indexOf(getCurrentZone());
+                player.score += 10 + currentZoneTier * 2;
+                player.ammo = Math.min(99, player.ammo + 6 * currentZoneTier);
 
                 if (player.score > 0 && player.score % 100 === 0) {
                   wave += 1;
@@ -538,6 +535,29 @@
         ctx.beginPath();
         ctx.arc(mapCenter.x, mapCenter.y, 11.2 * zoneScale, 0, Math.PI * 2);
         ctx.stroke();
+
+        // City-block overlay to read the zone as different district layouts.
+        for (let i = 0; i < 16; i++) {
+          const rx = (i * 80 + 40) % canvas.width;
+          const ry = (i * 40 + 60) % canvas.height;
+          if (zone.name === 'INDUSTRIAL') {
+            ctx.fillStyle = 'rgba(120, 138, 160, 0.22)';
+            ctx.fillRect(rx, ry, 60, 34);
+          } else if (zone.name === 'MARKET') {
+            ctx.fillStyle = 'rgba(180, 140, 80, 0.18)';
+            ctx.fillRect(rx, ry, 46, 28);
+            ctx.fillStyle = 'rgba(255, 228, 160, 0.08)';
+            ctx.fillRect(rx + 6, ry + 6, 14, 12);
+          } else if (zone.name === 'SLUMS') {
+            ctx.fillStyle = 'rgba(120, 75, 40, 0.16)';
+            ctx.fillRect(rx, ry, 38, 24);
+            ctx.fillStyle = 'rgba(255, 180, 90, 0.08)';
+            ctx.fillRect(rx + 7, ry + 5, 10, 8);
+          } else {
+            ctx.fillStyle = 'rgba(180, 50, 50, 0.10)';
+            ctx.fillRect(rx, ry, 58, 22);
+          }
+        }
       }
 
       function drawMinimap() {
@@ -689,7 +709,7 @@
         if (!started) resetGame();
       });
 
-      // Zone deploy: map tiers are now active and tracked by radial distance from the center.
+      // Zone deploy: ring map tiers are active and tracked by radial distance from the center.
       currentZoneName = 'S-CENTER';
       zoneValue.textContent = currentZoneName;
       resetGame();
